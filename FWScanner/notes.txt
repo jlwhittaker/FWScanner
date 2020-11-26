@@ -1,0 +1,38 @@
+﻿Current considerations:
+
+1.
+For Windows firewall information, it seems that the INetFwMgr interface is not showing any open
+ports... there is a GloballyOpenPorts property on the INetFwProfile object, but it's always empty.
+I'm not exactly sure what "globally open" means here, so maybe that's actually expected behavior.
+I looked into manually opening a port, but haven't yet found a simple way to do so. I found a stack
+overflow post that uses the hardcoded GUID of the INetFwOpenPort COM object in order to instantiate 
+a new port, to then pass to the INetFwOpenPorts.Add method, but that doesn't seem ideal.
+
+However, I started digging into the FwPolicy2 object instead of the FwMgr, and it's giving me a 
+lot more information. Each policy has a collection of INetFwRule objects, each with both a 
+LocalPorts and RemotePorts property. 
+I'm now reading tons of rules with open ports; network discovery, RPC, DHCP, etc... basically all of
+the services you would expect to have ports open.
+
+
+2.
+It doesn't seem possible to be running the Windows Firewall at the same time as a 3rd party firewall.
+Whenever activating a third party firewall, the windows firewall automatically becomes disabled. It 
+also doesn't seem possible (or useful, or sensible) to be running multiple 3rd party firewalls. The current
+implementation gathers a list of 3rd party firewalls, but I haven't successfully installed enough 
+of them to see the list get larger than one item. Perhaps multiple firewalls will be registered in WMI, 
+and they will all show up, but only one will be enabled. Further testing is required. Most of the freeware
+firewalls I've found keep crashing my machine, but this could be a configuration issue, or just the result 
+of trying to run multiple 3rd party firewalls together.
+
+3.
+Information in the WMI for 3rd party firewalls is limited, and not formatted very nicely. The displayName 
+property is simple enough, but that's really the only thing that's useful. The only place to see the 
+version number is on the executable path, assuming the vendor using such a naming schema. Dynamically 
+pulling the version number out of the path is doable, but I anticipate issues with different vendors and 
+different naming schemas. Also, the ProductState property is a 6 digit number, with no reference that I 
+can find to explain what it corresponds to. Some research has shown that it might actually be vendor 
+specific -- Each vendor gets to use its own 6 digit number however they please. Hopefully that's not true.
+Trial and error can establish a correspondence relative to one specific product (i.e. changing the state 
+in the products tools and seeing how the number changes). Perhaps installing all of the most commonly
+used firewalls and manually determining what these numbers mean is the only way to go, but God I hope not..

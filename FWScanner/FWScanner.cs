@@ -42,9 +42,9 @@ namespace FWScanner
                 OpenPorts = new List<int>()
             };
 
-            foreach (int port in FwProfile.GloballyOpenPorts)
+            foreach (int p in FwProfile.GloballyOpenPorts)
             {
-                Result.WinFW.OpenPorts.Add(port);
+                Result.WinFW.OpenPorts.Add(p);
             }
 
             // Third Party Firewalls 
@@ -74,9 +74,33 @@ namespace FWScanner
                     Result.TPFWs.Add(TPFW);
                 }    
             }
+            PortScan();
             return Result;
         }
 
+        public static void PortScan()
+        /* Experimental!
+         * 
+        * The FwMgr object used above gives access to INetFwProfile objects,
+        * but each of those object's GloballyOpenPorts property is always empty.
+        * This FwPolicy object gives access to every individual firewall rule, 
+        * each with a LocalPorts and RemotePorts object. See notes.txt
+        * 
+        * TODO -- Decide how this information should be used, and implement.
+        * Maybe just a count of how many rules have open remote ports, or actually
+        * storing every rule.
+        */
+        {
+            Type tFwPolicy = Type.GetTypeFromProgID("HNetCfg.FwPolicy2", false);
+            INetFwPolicy2 FwPolicy = (INetFwPolicy2)Activator.CreateInstance(tFwPolicy);
+            INetFwRules FwRules = FwPolicy.Rules;
+            //Console.WriteLine("Open Ports:");
+            foreach (INetFwRule Rule in FwRules)
+            {
+                //Console.WriteLine(Rule.Name);
+                //Console.WriteLine(Rule.RemotePorts);
+            }
+        }
     }
 
     public class ScanResult
@@ -126,29 +150,25 @@ namespace FWScanner
             {
                 Console.WriteLine("    No open ports detected.");
             }
-            Console.WriteLine();
+
+            Console.WriteLine("\n\n");
+
+            int TPFWCount = FWScan.TPFWs.Count;
+            Console.WriteLine("{0} Third-Party Firewall(s) detected.", FWScan.TPFWs.Count);
 
             if (FWScan.TPFWs.Count > 0)
             {
-                Console.WriteLine("No Third-Party Firewalls detected.");
                 foreach (ThirdPartyFirewall TPFW in FWScan.TPFWs)
                 {
-                    Console.WriteLine();
-                    Console.WriteLine("Third Party Firewall:");
-                    Console.WriteLine("===============");
-
+                    Console.WriteLine("\nThird Party Firewall:\n===============");
                     foreach (PropertyDescriptor Descriptor in TypeDescriptor.GetProperties(TPFW))
                     {
                         Console.WriteLine("{0}: {1}", Descriptor.Name, Descriptor.GetValue(TPFW));
                     }
                 }
             }
-            else
-            {
-                Console.WriteLine("No Firewalls Detected.");
-            }
             //Uncomment next line for debugging in VS -- keeps console open
-            //Console.ReadLine();
+            Console.ReadLine();
         }
     }
 }
