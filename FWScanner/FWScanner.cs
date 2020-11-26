@@ -5,10 +5,16 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Management;
 using System.ComponentModel;
+using NetFwTypeLib;
 
 /* Scan for all 3rd party firewalls and report info */
 
-/* 3rd party firewalls are registered in SecurityCenter2 within WMI, stored as instances of the 
+/* 
+ * Windows Firewall information can be found using the INetFwMgr interface in the NetFwTypeLib namespace.
+ * The firewall manager object, HNetCfg.FwMgr, is a COM object; type is retrieved at runtime and instantiated
+ * using Activator.CreateInstance()
+
+ * 3rd party firewalls are registered in SecurityCenter2 within WMI, stored as instances of the 
  * FirewallProduct class. They can be retrieved using an instance of the ManagementObjectSearcher class, 
  * constructed using a ManagementScope object and an ObjectQuery object as constructor args. 
  * All of these classes are in the System.Management namespace
@@ -16,11 +22,36 @@ using System.ComponentModel;
 
 namespace FWScanner
 {
-    class FWScanner
+    public class FWScanner
     {
-        public static List<Firewall> Scan()
+        public static ScanResult Scan()
         {
-            List<Firewall> ScanResult = new List<Firewall>();
+            ScanResult Result = new ScanResult();
+
+            // Windows Firewall
+
+            //Instantiate Firewall Manager object and get current profile
+            Type tNetFirewall = Type.GetTypeFromProgID("HNetCfg.FwMgr", false);
+            INetFwMgr FwMgr = (INetFwMgr)Activator.CreateInstance(tNetFirewall);
+            INetFwProfile FwProfile = FwMgr.LocalPolicy.CurrentProfile;
+            
+            // Populate return object
+            Result.WinFW = new WindowsFirewall
+            {
+                Enabled = FwProfile.FirewallEnabled,
+                OpenPorts = new List<int>()
+            };
+
+            foreach (int port in FwProfile.GloballyOpenPorts)
+            {
+                Result.WinFW.OpenPorts.Add(port);
+            }
+
+            // Third Party Firewalls 
+
+
+
+            Result.TPFWs = new List<ThirdPartyFirewall>();
 
             // Set up scope for WMI
             ManagementScope Scope = new ManagementScope("\\\\localhost\\root\\SecurityCenter2", null);
@@ -35,28 +66,34 @@ namespace FWScanner
             {
                 foreach (ManagementObject FW in Searcher.Get())
                 {
-                    Firewall Result = new Firewall();
+                    ThirdPartyFirewall TPFW = new ThirdPartyFirewall();
 
                     foreach (PropertyData Property in FW.Properties)
                     {
                         //This line works because of direct mapping between Firewall and WMI object properties
-                        Result.GetType().GetProperty(Property.Name).SetValue(Result, Property.Value);
+                        TPFW.GetType().GetProperty(Property.Name).SetValue(TPFW, Property.Value);
                     }
-
-                    ScanResult.Add(Result);
-                }
+                    Result.TPFWs.Add(TPFW);
+                }    
             }
-            else
-            {
-                ScanResult = null;
-            }
-            
-            return ScanResult;
+            return Result;
         }
 
     }
 
-    class Firewall
+    public class ScanResult
+    {
+        public WindowsFirewall WinFW { get; set; }
+        public List<ThirdPartyFirewall> TPFWs { get; set; }
+    }
+
+    public class WindowsFirewall
+    {
+        public bool Enabled { get; set; }
+        public List<int> OpenPorts { get; set; }
+    }
+
+    public class ThirdPartyFirewall
     // Properties are 1 to 1 match for properties in WMI object, not sure if good idea or not
     {
         public string displayName { get; set; }
@@ -67,22 +104,42 @@ namespace FWScanner
         public string timestamp { get; set; }
     }
 
-    class Program
+    public class FwScanTest
     {
-        static void Main(string[] args)
+        static void Run(string[] args)
         {
-            List<Firewall> ScanResults = FWScanner.Scan();
+            ScanResult FWScan = FWScanner.Scan();
+            string WinFWStatus = FWScan.WinFW.Enabled ? "Enabled" : "Disabled";
 
-            if (ScanResults != null)
+            Console.WriteLine("Windows Firewall:");
+            Console.WriteLine("    Status: {0}", WinFWStatus);
+
+            if (FWScan.WinFW.OpenPorts.Count > 0)
             {
-                foreach (Firewall Result in ScanResults)
+                Console.WriteLine("    Open ports detected:");
+                foreach ( int Port in FWScan.WinFW.OpenPorts)
                 {
-                    Console.WriteLine("Firewall Found:");
+                    Console.WriteLine(Port);
+                }
+            }
+            else
+            {
+                Console.WriteLine("    No open ports detected.");
+            }
+            Console.WriteLine();
+
+            if (FWScan.TPFWs.Count > 0)
+            {
+                Console.WriteLine("Third-Party Firewalls detected.");
+                foreach (ThirdPartyFirewall TPFW in FWScan.TPFWs)
+                {
+                    Console.WriteLine();
+                    Console.WriteLine("Third Party Firewall:");
                     Console.WriteLine("===============");
 
-                    foreach (PropertyDescriptor Descriptor in TypeDescriptor.GetProperties(Result))
+                    foreach (PropertyDescriptor Descriptor in TypeDescriptor.GetProperties(TPFW))
                     {
-                        Console.WriteLine("{0}: {1}", Descriptor.Name, Descriptor.GetValue(Result));
+                        Console.WriteLine("{0}: {1}", Descriptor.Name, Descriptor.GetValue(TPFW));
                     }
                 }
             }
@@ -91,7 +148,7 @@ namespace FWScanner
                 Console.WriteLine("No Firewalls Detected.");
             }
             //Uncomment next line for debugging in VS -- keeps console open
-            //Console.ReadLine();
+            Console.ReadLine();
         }
     }
 }
