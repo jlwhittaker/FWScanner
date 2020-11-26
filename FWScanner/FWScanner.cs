@@ -49,8 +49,6 @@ namespace FWScanner
 
             // Third Party Firewalls 
 
-
-
             Result.TPFWs = new List<ThirdPartyFirewall>();
 
             // Set up scope for WMI
