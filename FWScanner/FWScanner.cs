@@ -7,7 +7,7 @@ using System.Management;
 using System.ComponentModel;
 using NetFwTypeLib;
 
-/* Scan for all 3rd party firewalls and report info */
+/* Scan for all firewalls and report info */
 
 /* 
  * Windows Firewall information can be found using the INetFwMgr interface in the NetFwTypeLib namespace.
