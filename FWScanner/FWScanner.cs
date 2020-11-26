@@ -106,8 +106,10 @@ namespace FWScanner
 
     public class FwScanTest
     {
-        static void Run(string[] args)
+        static void Main(string[] args)
         {
+            // Run scan and print results to console
+
             ScanResult FWScan = FWScanner.Scan();
             string WinFWStatus = FWScan.WinFW.Enabled ? "Enabled" : "Disabled";
 
@@ -148,7 +150,7 @@ namespace FWScanner
                 Console.WriteLine("No Firewalls Detected.");
             }
             //Uncomment next line for debugging in VS -- keeps console open
-            Console.ReadLine();
+            //Console.ReadLine();
         }
     }
 }

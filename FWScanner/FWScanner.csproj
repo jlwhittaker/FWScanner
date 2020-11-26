@@ -5,7 +5,7 @@
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{E4DF89DB-3A11-4AE6-8D86-1817F8C126EA}</ProjectGuid>
-    <OutputType>Library</OutputType>
+    <OutputType>Exe</OutputType>
     <RootNamespace>FWScanner</RootNamespace>
     <AssemblyName>FWScanner</AssemblyName>
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
