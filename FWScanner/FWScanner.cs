@@ -9,11 +9,6 @@ using NetFwTypeLib;
 
 /* Scan for all firewalls and report info */
 
-/* 
- * Windows Firewall information can be found using the INetFwMgr interface in the NetFwTypeLib namespace.
- * The firewall manager object, HNetCfg.FwMgr, is a COM object; type is retrieved at runtime and instantiated
- * using Activator.CreateInstance()
-*/
 
 
 namespace FWScanner
@@ -67,17 +62,23 @@ namespace FWScanner
         }
 
         private static WindowsFirewall WinFwScan()
+        /* 
+        * Windows Firewall information can be found using the INetFwMgr interface in the NetFwTypeLib namespace.
+        * The firewall manager object, HNetCfg.FwMgr, is a COM object; type is retrieved at runtime and instantiated
+        * using Activator.CreateInstance()
+        */
+
         /* Each firewall rule in the Windows Firewall has associated remote ports.
          * This subroutine handles retrieving them, and storing them in the WinFW object in the
          * scan result. The WinFW object has a RulesByPort dict that allows looking up
-         * what rules are associated with any given port (i.e. RulesByPort[string PortNumber])
+         * what rules are associated with any given port (i.e. GetRulesByPort(string PortNumber))
          * See the ConsoleApp in this solution for a usage example.
          * 
          * The RemotePorts property in INetFwRule is just a string; it has comma-separated ports,
          * some actually using alphabetical names instead of numbers. This gets pulled out into
          * a list of strings, so that a program using ports 80 and 443 can be found via
-         * RulesByPort["80"] or RulesByPort["443"]
-        */
+         * GetRulesByPort("80") or GetRulesByPort("443")
+         */
         {
             WindowsFirewall WinFW = new WindowsFirewall();
 
@@ -154,7 +155,12 @@ namespace FWScanner
             {
                 return AllRules;
             }
-            public Dictionary<string, List<WinFWRule>> RulesByPort { get; set; }
+            private Dictionary<string, List<WinFWRule>> RulesByPort { get; set; }
+
+            public List<Scanner.WinFWRule> GetRulesByPort(string portNumber)
+            {
+                return RulesByPort[portNumber];
+            }
         }
 
         public class WinFWRule
