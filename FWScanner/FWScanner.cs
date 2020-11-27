@@ -13,12 +13,8 @@ using NetFwTypeLib;
  * Windows Firewall information can be found using the INetFwMgr interface in the NetFwTypeLib namespace.
  * The firewall manager object, HNetCfg.FwMgr, is a COM object; type is retrieved at runtime and instantiated
  * using Activator.CreateInstance()
+*/
 
- * 3rd party firewalls are registered in SecurityCenter2 within WMI, stored as instances of the 
- * FirewallProduct class. They can be retrieved using an instance of the ManagementObjectSearcher class, 
- * constructed using a ManagementScope object and an ObjectQuery object as constructor args. 
- * All of these classes are in the System.Management namespace
- */
 
 namespace FWScanner
 {
@@ -27,29 +23,21 @@ namespace FWScanner
         public static ScanResult Scan()
         {
             ScanResult Result = new ScanResult();
-
             // Windows Firewall
+            Result.WinFW = WinFwScan();
+            // Third-Party Firewalls
+            Result.TPFWs = TPFWScan();
+            return Result;
+        }
 
-            //Instantiate Firewall Manager object and get current profile
-            Type tNetFirewall = Type.GetTypeFromProgID("HNetCfg.FwMgr", false);
-            INetFwMgr FwMgr = (INetFwMgr)Activator.CreateInstance(tNetFirewall);
-            INetFwProfile FwProfile = FwMgr.LocalPolicy.CurrentProfile;
-            
-            // Populate return object
-            Result.WinFW = new WindowsFirewall
-            {
-                Enabled = FwProfile.FirewallEnabled,
-                OpenPorts = new List<int>()
-            };
-
-            foreach (int p in FwProfile.GloballyOpenPorts)
-            {
-                Result.WinFW.OpenPorts.Add(p);
-            }
-
-            // Third Party Firewalls 
-
-            Result.TPFWs = new List<ThirdPartyFirewall>();
+        private static List<ThirdPartyFirewall> TPFWScan()
+        /* 3rd party firewalls are registered in SecurityCenter2 within WMI, stored as instances of the 
+        * FirewallProduct class. They can be retrieved using an instance of the ManagementObjectSearcher class, 
+        * constructed using a ManagementScope object and an ObjectQuery object as constructor args. 
+        * All of these classes are in the System.Management namespace
+        */
+        {
+            List<ThirdPartyFirewall> TPFWs = new List<ThirdPartyFirewall>();
 
             // Set up scope for WMI
             ManagementScope Scope = new ManagementScope("\\\\localhost\\root\\SecurityCenter2", null);
@@ -71,35 +59,67 @@ namespace FWScanner
                         //This line works because of direct mapping between Firewall and WMI object properties
                         TPFW.GetType().GetProperty(Property.Name).SetValue(TPFW, Property.Value);
                     }
-                    Result.TPFWs.Add(TPFW);
-                }    
+                    TPFWs.Add(TPFW);
+                }
             }
-            PortScan();
-            return Result;
+
+            return TPFWs;
         }
 
-        private static void PortScan()
-        /* Experimental!
+        private static WindowsFirewall WinFwScan()
+        /* Each firewall rule in the Windows Firewall has associated remote ports.
+         * This subroutine handles retrieving them, and storing them in the WinFW object in the
+         * scan result. The WinFW object has a RulesByPort dict that allows looking up
+         * what rules are associated with any given port (i.e. RulesByPort[string PortNumber])
+         * See the ConsoleApp in this solution for a usage example.
          * 
-        * The FwMgr object used above gives access to INetFwProfile objects,
-        * but each of those object's GloballyOpenPorts property is always empty.
-        * This FwPolicy object gives access to every individual firewall rule, 
-        * each with a LocalPorts and RemotePorts object. See notes.txt
-        * 
-        * TODO -- Decide how this information should be used, and implement.
-        * Maybe just a count of how many rules have open remote ports, or actually
-        * storing every rule.
+         * The RemotePorts property in INetFwRule is just a string; it has comma-separated ports,
+         * some actually using alphabetical names instead of numbers. This gets pulled out into
+         * a list of strings, so that a program using ports 80 and 443 can be found via
+         * RulesByPort["80"] or RulesByPort["443"]
         */
         {
+            WindowsFirewall WinFW = new WindowsFirewall();
+
+            //Instantiate Firewall Manager object and get current profile
+            Type tNetFirewall = Type.GetTypeFromProgID("HNetCfg.FwMgr", false);
+            INetFwMgr FwMgr = (INetFwMgr)Activator.CreateInstance(tNetFirewall);
+            INetFwProfile FwProfile = FwMgr.LocalPolicy.CurrentProfile;
+
+            // Populate basic properties
+            WinFW.Enabled = FwProfile.FirewallEnabled;
+            WinFW.GloballyOpenPorts = new List<int>();
+  
+            foreach (int p in FwProfile.GloballyOpenPorts)
+            {
+                WinFW.GloballyOpenPorts.Add(p);
+            }
+
+            //Get Rule objects
             Type tFwPolicy = Type.GetTypeFromProgID("HNetCfg.FwPolicy2", false);
             INetFwPolicy2 FwPolicy = (INetFwPolicy2)Activator.CreateInstance(tFwPolicy);
             INetFwRules FwRules = FwPolicy.Rules;
-            //Console.WriteLine("Open Ports:");
+
+            // Create a new rule for each rule object, pass it to the AddRule method of the 
+            // WinFW object
             foreach (INetFwRule Rule in FwRules)
             {
-                //Console.WriteLine(Rule.Name);
-                //Console.WriteLine(Rule.RemotePorts);
+                WinFWRule R = new WinFWRule();
+                R.Name = Rule.Name;
+                R.Description = Rule.Description;
+                R.ApplicationName = Rule.ApplicationName;
+                R.ServiceName = Rule.serviceName;
+                R.Enabled = Rule.Enabled;
+                R.RemotePorts = new List<string>();
+                if (Rule.RemotePorts != null)
+                {
+                    //Separate by commas
+                    R.RemotePorts.AddRange(Rule.RemotePorts.Split(','));
+                }
+                WinFW.AddRule(R);
             }
+
+            return WinFW;
         }
 
         public class ScanResult
@@ -110,8 +130,43 @@ namespace FWScanner
 
         public class WindowsFirewall
         {
+            public WindowsFirewall()
+            {
+                this.AllRules = new List<WinFWRule>();
+                this.RulesByPort = new Dictionary<string, List<WinFWRule>>();
+            }
             public bool Enabled { get; set; }
-            public List<int> OpenPorts { get; set; }
+            public List<int> GloballyOpenPorts { get; set; }
+            private List<WinFWRule> AllRules { get; set; }
+            internal void AddRule(WinFWRule NewRule)
+            {
+                this.AllRules.Add(NewRule);
+                foreach (string P in NewRule.RemotePorts)
+                {
+                    if (!RulesByPort.ContainsKey(P))
+                    {
+                        RulesByPort[P] = new List<WinFWRule>();
+                    }
+                    RulesByPort[P].Add(NewRule);
+                }
+            }
+            public List<WinFWRule> GetAllRules()
+            {
+                return AllRules;
+            }
+            public Dictionary<string, List<WinFWRule>> RulesByPort { get; set; }
+        }
+
+        public class WinFWRule
+        {
+            public string Name { get; set; }
+            public string Description { get; set; }
+            public string ApplicationName { get; set; }
+            public string ServiceName { get; set; }
+            public bool Enabled { get; set; }
+            public List<string> LocalPorts { get; set; }
+            public List<string> RemotePorts { get; set; }
+
         }
 
         public class ThirdPartyFirewall
@@ -137,10 +192,10 @@ namespace FWScanner
                 Console.WriteLine("Windows Firewall:");
                 Console.WriteLine("    Status: {0}", WinFWStatus);
 
-                if (FWScan.WinFW.OpenPorts.Count > 0)
+                if (FWScan.WinFW.GloballyOpenPorts.Count > 0)
                 {
                     Console.WriteLine("    Open ports detected:");
-                    foreach (int Port in FWScan.WinFW.OpenPorts)
+                    foreach (int Port in FWScan.WinFW.GloballyOpenPorts)
                     {
                         Console.WriteLine(Port);
                     }
@@ -167,7 +222,7 @@ namespace FWScanner
                     }
                 }
                 //Uncomment next line for debugging in VS -- keeps console open
-                Console.ReadLine();
+                //Console.ReadLine();
             }
         }
     }
