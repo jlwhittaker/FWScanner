@@ -153,9 +153,9 @@ namespace FWScanner
                 Console.WriteLine("\n\n");
 
                 int TPFWCount = FWScan.TPFWs.Count;
-                Console.WriteLine("{0} Third-Party Firewall(s) detected.", FWScan.TPFWs.Count);
+                Console.WriteLine("{0} Third-Party Firewall(s) detected.", TPFWCount);
 
-                if (FWScan.TPFWs.Count > 0)
+                if (TPFWCount > 0)
                 {
                     foreach (ThirdPartyFirewall TPFW in FWScan.TPFWs)
                     {
