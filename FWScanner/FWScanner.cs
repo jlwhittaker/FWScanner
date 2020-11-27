@@ -22,7 +22,7 @@ using NetFwTypeLib;
 
 namespace FWScanner
 {
-    public class FWScanner
+    public class Scanner
     {
         public static ScanResult Scan()
         {
@@ -131,7 +131,7 @@ namespace FWScanner
             {
                 // Run scan and print results to console
 
-                ScanResult FWScan = FWScanner.Scan();
+                ScanResult FWScan = Scan();
                 string WinFWStatus = FWScan.WinFW.Enabled ? "Enabled" : "Disabled";
 
                 Console.WriteLine("Windows Firewall:");
