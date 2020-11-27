@@ -59,6 +59,7 @@ namespace FWScanner
             }
 
             return TPFWs;
+
         }
 
         private static WindowsFirewall WinFwScan()
