@@ -78,7 +78,7 @@ namespace FWScanner
             return Result;
         }
 
-        public static void PortScan()
+        private static void PortScan()
         /* Experimental!
          * 
         * The FwMgr object used above gives access to INetFwProfile objects,
@@ -101,74 +101,76 @@ namespace FWScanner
                 //Console.WriteLine(Rule.RemotePorts);
             }
         }
-    }
 
-    public class ScanResult
-    {
-        public WindowsFirewall WinFW { get; set; }
-        public List<ThirdPartyFirewall> TPFWs { get; set; }
-    }
-
-    public class WindowsFirewall
-    {
-        public bool Enabled { get; set; }
-        public List<int> OpenPorts { get; set; }
-    }
-
-    public class ThirdPartyFirewall
-    // Properties are 1 to 1 match for properties in WMI object, not sure if good idea or not
-    {
-        public string displayName { get; set; }
-        public string instanceGuid { get; set; }
-        public string pathToSignedProductExe { get; set; }
-        public string pathToSignedReportingExe { get; set; }
-        public UInt32 productState { get; set; }
-        public string timestamp { get; set; }
-    }
-
-    public class FwScanTest
-    {
-        static void Main(string[] args)
+        public class ScanResult
         {
-            // Run scan and print results to console
+            public WindowsFirewall WinFW { get; set; }
+            public List<ThirdPartyFirewall> TPFWs { get; set; }
+        }
 
-            ScanResult FWScan = FWScanner.Scan();
-            string WinFWStatus = FWScan.WinFW.Enabled ? "Enabled" : "Disabled";
+        public class WindowsFirewall
+        {
+            public bool Enabled { get; set; }
+            public List<int> OpenPorts { get; set; }
+        }
 
-            Console.WriteLine("Windows Firewall:");
-            Console.WriteLine("    Status: {0}", WinFWStatus);
-
-            if (FWScan.WinFW.OpenPorts.Count > 0)
+        public class ThirdPartyFirewall
+        // Properties are 1 to 1 match for properties in WMI object, not sure if good idea or not
+        {
+            public string displayName { get; set; }
+            public string instanceGuid { get; set; }
+            public string pathToSignedProductExe { get; set; }
+            public string pathToSignedReportingExe { get; set; }
+            public UInt32 productState { get; set; }
+            public string timestamp { get; set; }
+        }
+        
+        public class FwScanTest
+        {
+            public static void Run()
             {
-                Console.WriteLine("    Open ports detected:");
-                foreach ( int Port in FWScan.WinFW.OpenPorts)
+                // Run scan and print results to console
+
+                ScanResult FWScan = FWScanner.Scan();
+                string WinFWStatus = FWScan.WinFW.Enabled ? "Enabled" : "Disabled";
+
+                Console.WriteLine("Windows Firewall:");
+                Console.WriteLine("    Status: {0}", WinFWStatus);
+
+                if (FWScan.WinFW.OpenPorts.Count > 0)
                 {
-                    Console.WriteLine(Port);
-                }
-            }
-            else
-            {
-                Console.WriteLine("    No open ports detected.");
-            }
-
-            Console.WriteLine("\n\n");
-
-            int TPFWCount = FWScan.TPFWs.Count;
-            Console.WriteLine("{0} Third-Party Firewall(s) detected.", FWScan.TPFWs.Count);
-
-            if (FWScan.TPFWs.Count > 0)
-            {
-                foreach (ThirdPartyFirewall TPFW in FWScan.TPFWs)
-                {
-                    Console.WriteLine("\nThird Party Firewall:\n===============");
-                    foreach (PropertyDescriptor Descriptor in TypeDescriptor.GetProperties(TPFW))
+                    Console.WriteLine("    Open ports detected:");
+                    foreach (int Port in FWScan.WinFW.OpenPorts)
                     {
-                        Console.WriteLine("{0}: {1}", Descriptor.Name, Descriptor.GetValue(TPFW));
+                        Console.WriteLine(Port);
                     }
                 }
+                else
+                {
+                    Console.WriteLine("    No open ports detected.");
+                }
+
+                Console.WriteLine("\n\n");
+
+                int TPFWCount = FWScan.TPFWs.Count;
+                Console.WriteLine("{0} Third-Party Firewall(s) detected.", FWScan.TPFWs.Count);
+
+                if (FWScan.TPFWs.Count > 0)
+                {
+                    foreach (ThirdPartyFirewall TPFW in FWScan.TPFWs)
+                    {
+                        Console.WriteLine("\nThird Party Firewall:\n===============");
+                        foreach (PropertyDescriptor Descriptor in TypeDescriptor.GetProperties(TPFW))
+                        {
+                            Console.WriteLine("{0}: {1}", Descriptor.Name, Descriptor.GetValue(TPFW));
+                        }
+                    }
+                }
+                //Uncomment next line for debugging in VS -- keeps console open
+                Console.ReadLine();
             }
-            //Uncomment next line for debugging in VS -- keeps console open
-            Console.ReadLine();
         }
     }
+
+    
 }
