@@ -4,16 +4,20 @@
 For Windows firewall information, it seems that the INetFwMgr interface is not showing any open
 ports... there is a GloballyOpenPorts property on the INetFwProfile object, but it's always empty.
 I'm not exactly sure what "globally open" means here, so maybe that's actually expected behavior.
-I looked into manually opening a port, but haven't yet found a simple way to do so. I found a stack
-overflow post that uses the hardcoded GUID of the INetFwOpenPort COM object in order to instantiate 
-a new port, to then pass to the INetFwOpenPorts.Add method, but that doesn't seem ideal.
+I looked into manually opening a port to test this, but haven't yet found a simple way to do so. 
+I found a stack overflow post that uses the hardcoded GUID of the INetFwOpenPort COM object in order 
+to instantiate a new port, to then pass to the INetFwOpenPorts.Add method, but that doesn't seem ideal.
 
 However, I started digging into the FwPolicy2 object instead of the FwMgr, and it's giving me a 
 lot more information. Each policy has a collection of INetFwRule objects, each with both a 
 LocalPorts and RemotePorts property. 
 I'm now reading tons of rules with open ports; network discovery, RPC, DHCP, etc... basically all of
 the services you would expect to have ports open.
-
+**Update to Note 1
+The INetFwPolicy2 interface did indeeed prove to be useful. I've added functionality for storing all
+of the WinFW rules in the scan result, along with the ability to look up rules by port, just as an 
+arbitrary example. There's quite a lot of information in the WinFW stuff, just depends on what we want to 
+do with it..
 
 2.
 It doesn't seem possible to be running the Windows Firewall at the same time as a 3rd party firewall.
@@ -36,3 +40,14 @@ specific -- Each vendor gets to use its own 6 digit number however they please. 
 Trial and error can establish a correspondence relative to one specific product (i.e. changing the state 
 in the products tools and seeing how the number changes). Perhaps installing all of the most commonly
 used firewalls and manually determining what these numbers mean is the only way to go, but God I hope not..
+**Update to note 3.
+Some research found (TODO link post later, different machine..) a support forum post where a rep from 
+Microsoft informed an unfortunate user that retrieving 3rd party firewall info from WMI is unsupported and 
+undocumented. Basically, it should be depended upon at your own risk. He also said that the productState 
+property is not elaborated upon outside of Microsoft (he even mentioned NDAs!), and the meaning of such 
+numbers is between MS and the FW developers. Not good news for building an intuitive way of interacting with 
+these firewalls in a custom product. I still have some hope that there's something somewhere in the win32 
+libraries that will prove useful, but win32 libraries seem like a dark and scary place. I also found 
+someone's honor thesis about writing their own firewall using the Packet Filtering api that came with Win7. 
+Maybe unrelated but some of the functions he used could maybe yield useful information? 
+Kind of neat either way..
