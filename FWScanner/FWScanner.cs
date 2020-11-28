@@ -188,6 +188,8 @@ namespace FWScanner
         }
         
         public class FwScanTest
+        // I added this testing method before adding the ConsoleApp that uses this module, kept it in here anyway..
+        // It doesn't actually use the full functionality of the module, maybe don't use it for now?
         {
             public static void Run()
             {
