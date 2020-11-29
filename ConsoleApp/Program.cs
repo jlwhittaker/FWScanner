@@ -11,7 +11,7 @@ namespace ConsoleApp
     {
         static void Main(string[] args)
         {
-            Scanner.ScanResult Result = Scanner.Scan();
+            Scanner.IScanResult Result = Scanner.Scan();
 
             Console.WriteLine("Applications using port 80:");
             foreach (string AppName in GetAppNameByPort("80",Result.WinFW))
@@ -28,11 +28,11 @@ namespace ConsoleApp
             //Debugging; use to keep console open
             Console.ReadLine();
         }
-        static List<string> GetAppNameByPort(string PortNumber, Scanner.WindowsFirewall FW)
+        static List<string> GetAppNameByPort(string PortNumber, Scanner.IWindowsFirewall FW)
         {
-            List<Scanner.WinFWRule> Rules = FW.GetRulesByPort(PortNumber);
+            List<Scanner.IWinFWRule> Rules = FW.GetRulesByPort(PortNumber);
             List<string> AppNames = new List<string>();
-            foreach (Scanner.WinFWRule Rule in Rules)
+            foreach (Scanner.IWinFWRule Rule in Rules)
             {
                 AppNames.Add(Rule.ApplicationName);
             }

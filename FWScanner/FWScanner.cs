@@ -15,7 +15,7 @@ namespace FWScanner
 {
     public class Scanner
     {
-        public static ScanResult Scan()
+        public static IScanResult Scan()
         {
             ScanResult Result = new ScanResult();
             // Windows Firewall
@@ -24,15 +24,14 @@ namespace FWScanner
             Result.TPFWs = TPFWScan();
             return Result;
         }
-
-        private static List<ThirdPartyFirewall> TPFWScan()
+        private static List<IThirdPartyFirewall> TPFWScan()
         /* 3rd party firewalls are registered in SecurityCenter2 within WMI, stored as instances of the 
         * FirewallProduct class. They can be retrieved using an instance of the ManagementObjectSearcher class, 
         * constructed using a ManagementScope object and an ObjectQuery object as constructor args. 
         * All of these classes are in the System.Management namespace
         */
         {
-            List<ThirdPartyFirewall> TPFWs = new List<ThirdPartyFirewall>();
+            List<IThirdPartyFirewall> TPFWs = new List<IThirdPartyFirewall>();
 
             // Set up scope for WMI
             ManagementScope Scope = new ManagementScope("\\\\localhost\\root\\SecurityCenter2", null);
@@ -62,7 +61,7 @@ namespace FWScanner
 
         }
 
-        private static WindowsFirewall WinFwScan()
+        private static IWindowsFirewall WinFwScan()
         /* 
         * Windows Firewall information can be found using the INetFwMgr interface in the NetFwTypeLib namespace.
         * The firewall manager object, HNetCfg.FwMgr, is a COM object; type is retrieved at runtime and instantiated
@@ -124,22 +123,36 @@ namespace FWScanner
             return WinFW;
         }
 
-        public class ScanResult
+        public interface IScanResult
         {
-            public WindowsFirewall WinFW { get; set; }
-            public List<ThirdPartyFirewall> TPFWs { get; set; }
+            IWindowsFirewall WinFW { get;}
+            List<IThirdPartyFirewall> TPFWs { get; set; }
+
+        }
+        public class ScanResult : IScanResult
+        {
+            public IWindowsFirewall WinFW { get; set; }
+            public List<IThirdPartyFirewall> TPFWs { get; set; }
         }
 
-        public class WindowsFirewall
+        public interface IWindowsFirewall
+        {
+            bool Enabled { get; set; }
+            List<int> GloballyOpenPorts { get; set; }
+            List<IWinFWRule> GetAllRules();
+            List<IWinFWRule> GetRulesByPort(string PortNumber);
+        }
+
+        private class WindowsFirewall : IWindowsFirewall
         {
             public WindowsFirewall()
             {
-                this.AllRules = new List<WinFWRule>();
-                this.RulesByPort = new Dictionary<string, List<WinFWRule>>();
+                this.AllRules = new List<IWinFWRule>();
+                this.RulesByPort = new Dictionary<string, List<IWinFWRule>>();
             }
             public bool Enabled { get; set; }
             public List<int> GloballyOpenPorts { get; set; }
-            private List<WinFWRule> AllRules { get; set; }
+            private List<IWinFWRule> AllRules { get; set; }
             internal void AddRule(WinFWRule NewRule)
             {
                 this.AllRules.Add(NewRule);
@@ -147,24 +160,35 @@ namespace FWScanner
                 {
                     if (!RulesByPort.ContainsKey(P))
                     {
-                        RulesByPort[P] = new List<WinFWRule>();
+                        RulesByPort[P] = new List<IWinFWRule>();
                     }
                     RulesByPort[P].Add(NewRule);
                 }
             }
-            public List<WinFWRule> GetAllRules()
+            public List<IWinFWRule> GetAllRules()
             {
                 return AllRules;
             }
-            private Dictionary<string, List<WinFWRule>> RulesByPort { get; set; }
+            private Dictionary<string, List<IWinFWRule>> RulesByPort { get; set; }
 
-            public List<Scanner.WinFWRule> GetRulesByPort(string portNumber)
+            public List<IWinFWRule> GetRulesByPort(string portNumber)
             {
                 return RulesByPort[portNumber];
             }
         }
 
-        public class WinFWRule
+        public interface IWinFWRule
+        {
+            string Name { get; }
+            string Description { get; }
+            string ApplicationName { get; }
+            string ServiceName { get; }
+            bool Enabled { get; }
+            List<string> LocalPorts { get; }
+            List<string> RemotePorts { get; }
+        }
+
+        private class WinFWRule : IWinFWRule
         {
             public string Name { get; set; }
             public string Description { get; set; }
@@ -173,10 +197,15 @@ namespace FWScanner
             public bool Enabled { get; set; }
             public List<string> LocalPorts { get; set; }
             public List<string> RemotePorts { get; set; }
-
         }
 
-        public class ThirdPartyFirewall
+        public interface IThirdPartyFirewall
+        {
+            string displayName { get; }
+            string pathToSignedProductExe { get; }
+            UInt32 productState { get; }
+        }
+        public class ThirdPartyFirewall : IThirdPartyFirewall
         // Properties are 1 to 1 match for properties in WMI object, not sure if good idea or not
         {
             public string displayName { get; set; }
@@ -195,7 +224,7 @@ namespace FWScanner
             {
                 // Run scan and print results to console
 
-                ScanResult FWScan = Scan();
+                IScanResult FWScan = Scan();
                 string WinFWStatus = FWScan.WinFW.Enabled ? "Enabled" : "Disabled";
 
                 Console.WriteLine("Windows Firewall:");
