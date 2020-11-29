@@ -129,7 +129,7 @@ namespace FWScanner
             List<IThirdPartyFirewall> TPFWs { get; set; }
 
         }
-        public class ScanResult : IScanResult
+        private class ScanResult : IScanResult
         {
             public IWindowsFirewall WinFW { get; set; }
             public List<IThirdPartyFirewall> TPFWs { get; set; }
@@ -205,7 +205,7 @@ namespace FWScanner
             string pathToSignedProductExe { get; }
             UInt32 productState { get; }
         }
-        public class ThirdPartyFirewall : IThirdPartyFirewall
+        private class ThirdPartyFirewall : IThirdPartyFirewall
         // Properties are 1 to 1 match for properties in WMI object, not sure if good idea or not
         {
             public string displayName { get; set; }
