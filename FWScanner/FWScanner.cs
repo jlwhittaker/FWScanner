@@ -103,6 +103,7 @@ namespace FWScanner
                     IpProtocol = (Scanner.IP_PROTOCOL)p.Protocol,
                     RemoteAddresses = p.RemoteAddresses,
                 };
+                WinFW.GloballyOpenPorts.Add(NewPort);
             }
 
             //Get Rule objects
