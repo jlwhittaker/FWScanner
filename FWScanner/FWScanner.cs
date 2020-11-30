@@ -89,11 +89,20 @@ namespace FWScanner
 
             // Populate basic properties
             WinFW.Enabled = FwProfile.FirewallEnabled;
-            WinFW.GloballyOpenPorts = new List<int>();
+            WinFW.GloballyOpenPorts = new List<IGloballyOpenPort>();
+            Console.WriteLine(FwProfile.GloballyOpenPorts.Count);
   
-            foreach (int p in FwProfile.GloballyOpenPorts)
+            foreach (INetFwOpenPort p in FwProfile.GloballyOpenPorts)
             {
-                WinFW.GloballyOpenPorts.Add(p);
+                GloballyOpenPort NewPort = new GloballyOpenPort
+                {
+                    Name = p.Name,
+                    Port = p.Port,
+                    Enabled = p.Enabled,
+                    IpVersion = p.IpVersion,
+                    IpProtocol = (Scanner.IP_PROTOCOL)p.Protocol,
+                    RemoteAddresses = p.RemoteAddresses,
+                };
             }
 
             //Get Rule objects
@@ -134,11 +143,50 @@ namespace FWScanner
             public IWindowsFirewall WinFW { get; set; }
             public List<IThirdPartyFirewall> TPFWs { get; set; }
         }
+        
+        public enum IP_PROTOCOL
+            // these constants are the same as the protocol enum in NetFwTypeLib
+        {
+            TCP = 6,
+            UDP = 17,
+            ANY = 256
+        }
+
+        public enum IP_VERSON
+        {
+            V4 = 0,
+            V6 = 1,
+            ANY = 2,
+            MAX = 3
+        }
+
+        public interface IGloballyOpenPort
+        {
+            string Name { get; }
+            int Port { get; }
+            bool Enabled { get; }
+            bool BuiltIn { get; }
+            string RemoteAddresses { get; }
+            IP_PROTOCOL IpProtocol { get; }
+            NET_FW_IP_VERSION_ IpVersion { get; }
+
+        }
+
+        private class GloballyOpenPort : IGloballyOpenPort
+        {
+            public string Name { get; set; }
+            public int Port { get; set; }
+            public bool Enabled { get; set; }
+            public bool BuiltIn { get; set; }
+            public string RemoteAddresses { get; set; }
+            public IP_PROTOCOL IpProtocol { get; set; }
+            public NET_FW_IP_VERSION_ IpVersion { get; set; }
+        }
 
         public interface IWindowsFirewall
         {
             bool Enabled { get; set; }
-            List<int> GloballyOpenPorts { get; set; }
+            List<IGloballyOpenPort> GloballyOpenPorts { get; set; }
             List<IWinFWRule> GetAllRules();
             List<IWinFWRule> GetRulesByPort(string PortNumber);
         }
@@ -151,7 +199,7 @@ namespace FWScanner
                 this.RulesByPort = new Dictionary<string, List<IWinFWRule>>();
             }
             public bool Enabled { get; set; }
-            public List<int> GloballyOpenPorts { get; set; }
+            public List<IGloballyOpenPort> GloballyOpenPorts { get; set; }
             private List<IWinFWRule> AllRules { get; set; }
             internal void AddRule(WinFWRule NewRule)
             {
@@ -233,7 +281,7 @@ namespace FWScanner
                 if (FWScan.WinFW.GloballyOpenPorts.Count > 0)
                 {
                     Console.WriteLine("    Open ports detected:");
-                    foreach (int Port in FWScan.WinFW.GloballyOpenPorts)
+                    foreach (IGloballyOpenPort Port in FWScan.WinFW.GloballyOpenPorts)
                     {
                         Console.WriteLine(Port);
                     }
