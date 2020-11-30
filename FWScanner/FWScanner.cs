@@ -99,7 +99,7 @@ namespace FWScanner
                     Name = p.Name,
                     Port = p.Port,
                     Enabled = p.Enabled,
-                    IpVersion = p.IpVersion,
+                    IpVersion = (Scanner.IP_VERSION)p.IpVersion,
                     IpProtocol = (Scanner.IP_PROTOCOL)p.Protocol,
                     RemoteAddresses = p.RemoteAddresses,
                 };
@@ -153,7 +153,7 @@ namespace FWScanner
             ANY = 256
         }
 
-        public enum IP_VERSON
+        public enum IP_VERSION
         {
             V4 = 0,
             V6 = 1,
@@ -169,7 +169,7 @@ namespace FWScanner
             bool BuiltIn { get; }
             string RemoteAddresses { get; }
             IP_PROTOCOL IpProtocol { get; }
-            NET_FW_IP_VERSION_ IpVersion { get; }
+            IP_VERSION IpVersion { get; }
 
         }
 
@@ -181,7 +181,7 @@ namespace FWScanner
             public bool BuiltIn { get; set; }
             public string RemoteAddresses { get; set; }
             public IP_PROTOCOL IpProtocol { get; set; }
-            public NET_FW_IP_VERSION_ IpVersion { get; set; }
+            public IP_VERSION IpVersion { get; set; }
         }
 
         public interface IWindowsFirewall
