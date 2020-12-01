@@ -67,19 +67,7 @@ namespace FWScanner
         * The firewall manager object, HNetCfg.FwMgr, is a COM object; type is retrieved at runtime and instantiated
         * using Activator.CreateInstance()
         */
-
-        /* Each firewall rule in the Windows Firewall has associated remote ports.
-         * This subroutine handles retrieving them, and storing them in the WinFW object in the
-         * scan result. The WinFW object has a RulesByPort dict that allows looking up
-         * what rules are associated with any given port (i.e. GetRulesByPort(string PortNumber))
-         * See the ConsoleApp in this solution for a usage example.
-         * 
-         * The RemotePorts property in INetFwRule is just a string; it has comma-separated ports,
-         * some actually using alphabetical names instead of numbers. This gets pulled out into
-         * a list of strings, so that a program using ports 80 and 443 can be found via
-         * GetRulesByPort("80") or GetRulesByPort("443")
-         */
-        {
+        { 
             WindowsFirewall WinFW = new WindowsFirewall();
 
             //Instantiate Firewall Manager object and get current profile
@@ -90,7 +78,6 @@ namespace FWScanner
             // Populate basic properties
             WinFW.Enabled = FwProfile.FirewallEnabled;
             WinFW.GloballyOpenPorts = new List<IGloballyOpenPort>();
-            Console.WriteLine(FwProfile.GloballyOpenPorts.Count);
   
             foreach (INetFwOpenPort p in FwProfile.GloballyOpenPorts)
             {
